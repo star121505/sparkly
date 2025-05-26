@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Touch Sparks with UI</title>
+  <link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#FF69B4">
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background: black;
+      font-family: monospace;
+    }
+    canvas {
+      display: block;
+    }
+    #controls {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      background: rgba(0,0,0,0.6);
+      padding: 10px;
+      border-radius: 10px;
+      color: white;
+    }
+    #controls label, select, input {
+      display: block;
+      margin: 5px 0;
+    }
+  </style>
+</head>
+<body>
+<div id="controls">
+  <label>Velocidad (Speed): <input type="range" id="speed" min="1" max="10" value="2"></label>
+  <label>Color: <input type="color" id="colorPicker" value="#FF69B4"></label>
+  <label>Texto: 
+    <select id="textSelect">
+      <option>My Love</option>
+      <option>Te Amo</option>
+      <option>Mon Amour</option>
+      <option>Ich liebe dich</option>
+    </select>
+  </label>
+</div>
+
+<canvas id="canvas"></canvas>
+
+<script>
+// ========== CONFIG ========== //
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+// UI Controls
+const speedInput = document.getElementById('speed');
+const colorInput = document.getElementById('colorPicker');
+const textSelect = document.getElementById('textSelect');
+
+let textSpeed = +speedInput.value;
+let textColor = colorInput.value;
+let currentWord = textSelect.value;
+
+let columns = Math.floor(canvas.width / 100);
+let drops = Array(columns).fill(0);
+const particles = [];
+const sparks = [];
+
+// ========== BACKGROUND TEXT ========== //
+function drawBackgroundText() {
+  ctx.fillStyle = "rgba(0, 0, 0, 0.2)";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  ctx.fillStyle = textColor;
+  ctx.font = "20px monospace";
+  ctx.shadowColor = textColor;
+  ctx.shadowBlur = 10;
+
+  for (let i = 0; i < drops.length; i++) {
+    const x = i * 100;
+    const y = drops[i] * 30;
+    ctx.fillText(currentWord, x, y);
+
+    if (y > canvas.height && Math.random() > 0.975) {
+      drops[i] = 0;
+    } else {
+      drops[i] += textSpeed * 0.3;
+    }
+  }
+}
+
+// ========== PARTICLES ========== //
+class Particle {
+  constructor(x, y) {
+    this.x = x;
+    this.y = y;
+    this.radius = Math.random() * 2 + 1;
+    this.speedX = (Math.random() - 0.5) * 6;
+    this.speedY = (Math.random() - 0.5) * 6;
+    this.alpha = 1;
+  }
+  update() {
+    this.x += this.speedX;
+    this.y += this.speedY;
+    this.alpha -= 0.02;
+  }
+  draw() {
+    ctx.save();
+    ctx.globalAlpha = this.alpha;
+    ctx.fillStyle = "#FFD700";
+    ctx.shadowColor = "#FFD700";
+    ctx.shadowBlur = 10;
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+  isAlive() {
+    return this.alpha > 0;
+  }
+}
+
+// ========== TEXT SPARK ========== //
+class SparkText {
+  constructor(x, y, text) {
+    this.x = x;
+    this.y = y;
+    this.text = text;
+    this.alpha = 1;
+    this.size = 18;
+  }
+  update() {
+    this.y -= 1;
+    this.alpha -= 0.01;
+  }
+  draw() {
+    ctx.save();
+    ctx.globalAlpha = this.alpha;
+    ctx.fillStyle = textColor;
+    ctx.font = `${this.size}px monospace`;
+    ctx.shadowColor = textColor;
+    ctx.shadowBlur = 8;
+    ctx.fillText(this.text, this.x, this.y);
+    ctx.restore();
+  }
+  isAlive() {
+    return this.alpha > 0;
+  }
+}
+
+// ========== ANIMATION ========== //
+function animate() {
+  drawBackgroundText();
+
+  for (let i = particles.length - 1; i >= 0; i--) {
+    particles[i].update();
+    particles[i].draw();
+    if (!particles[i].isAlive()) particles.splice(i, 1);
+  }
+
+  for (let i = sparks.length - 1; i >= 0; i--) {
+    sparks[i].update();
+    sparks[i].draw();
+    if (!sparks[i].isAlive()) sparks.splice(i, 1);
+  }
+
+  requestAnimationFrame(animate);
+}
+
+// ========== EVENTS ========== //
+canvas.addEventListener("click", (e) => {
+  for (let i = 0; i < 30; i++) {
+    particles.push(new Particle(e.clientX, e.clientY));
+  }
+  sparks.push(new SparkText(e.clientX, e.clientY, currentWord));
+});
+
+canvas.addEventListener("touchstart", (e) => {
+  const touch = e.touches[0];
+  for (let i = 0; i < 30; i++) {
+    particles.push(new Particle(touch.clientX, touch.clientY));
+  }
+  sparks.push(new SparkText(touch.clientX, touch.clientY, currentWord));
+});
+
+window.addEventListener("resize", () => {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  columns = Math.floor(canvas.width / 100);
+  drops = Array(columns).fill(0);
+});
+
+// ========== UI Bindings ========== //
+speedInput.addEventListener('input', () => {
+  textSpeed = +speedInput.value;
+});
+colorInput.addEventListener('input', () => {
+  textColor = colorInput.value;
+});
+textSelect.addEventListener('change', () => {
+  currentWord = textSelect.value;
+});
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('service-worker.js')
+    .then(() => console.log('Service Worker registered'));
+}
+
+animate();
+</script>
+</body>
+</html>
