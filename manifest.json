@@ -4,12 +4,6 @@
   "start_url": "./for you.html",
   "display": "standalone",
   "background_color": "#000000",
-  "theme_color": "#FF69B4",
-  "icons": [
-    {
-      "src": "icon.png",
-      "sizes": "192x192",
-      "type": "image/png"
-    }
-  ]
+  "theme_color": "#FF69B4"
+
 }
